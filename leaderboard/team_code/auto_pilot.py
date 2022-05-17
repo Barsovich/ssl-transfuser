@@ -16,25 +16,6 @@ from team_code.pid_controller import PIDController
 
 WEATHERS = {
         'ClearNoon': carla.WeatherParameters.ClearNoon,
-        'ClearSunset': carla.WeatherParameters.ClearSunset,
-
-        'CloudyNoon': carla.WeatherParameters.CloudyNoon,
-        'CloudySunset': carla.WeatherParameters.CloudySunset,
-
-        'WetNoon': carla.WeatherParameters.WetNoon,
-        'WetSunset': carla.WeatherParameters.WetSunset,
-
-        'MidRainyNoon': carla.WeatherParameters.MidRainyNoon,
-        'MidRainSunset': carla.WeatherParameters.MidRainSunset,
-
-        'WetCloudyNoon': carla.WeatherParameters.WetCloudyNoon,
-        'WetCloudySunset': carla.WeatherParameters.WetCloudySunset,
-
-        'HardRainNoon': carla.WeatherParameters.HardRainNoon,
-        'HardRainSunset': carla.WeatherParameters.HardRainSunset,
-
-        'SoftRainNoon': carla.WeatherParameters.SoftRainNoon,
-        'SoftRainSunset': carla.WeatherParameters.SoftRainSunset,
 }
 WEATHERS_IDS = list(WEATHERS)
 

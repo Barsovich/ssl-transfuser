@@ -89,94 +89,11 @@ class BaseAgent(autonomous_agent.AutonomousAgent):
                     'width': self._sensor_data['width'], 'height': self._sensor_data['height'], 'fov': self._sensor_data['fov'],
                     'id': 'rgb_front'
                     },
-                {
-                    'type': 'sensor.camera.semantic_segmentation',
-                    'x': 1.3, 'y': 0.0, 'z': 2.3,
-                    'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                    'width': self._sensor_data['width'], 'height': self._sensor_data['height'], 'fov': self._sensor_data['fov'],
-                    'id': 'seg_front'
-                    },
-                {
-                    'type': 'sensor.camera.depth',
-                    'x': 1.3, 'y': 0.0, 'z': 2.3,
-                    'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                    'width': self._sensor_data['width'], 'height': self._sensor_data['height'], 'fov': self._sensor_data['fov'],
-                    'id': 'depth_front'
-                    },
-                {
-                    'type': 'sensor.camera.rgb',
-                    'x': -1.3, 'y': 0.0, 'z': 2.3,
-                    'roll': 0.0, 'pitch': 0.0, 'yaw': 180.0,
-                    'width': self._sensor_data['width'], 'height': self._sensor_data['height'], 'fov': self._sensor_data['fov'],
-                    'id': 'rgb_rear'
-                    },
-                {
-                    'type': 'sensor.camera.semantic_segmentation',
-                    'x': -1.3, 'y': 0.0, 'z': 2.3,
-                    'roll': 0.0, 'pitch': 0.0, 'yaw': 180.0,
-                    'width': self._sensor_data['width'], 'height': self._sensor_data['height'], 'fov': self._sensor_data['fov'],
-                    'id': 'seg_rear'
-                    },
-                {
-                    'type': 'sensor.camera.depth',
-                    'x': -1.3, 'y': 0.0, 'z': 2.3,
-                    'roll': 0.0, 'pitch': 0.0, 'yaw': 180.0,
-                    'width': self._sensor_data['width'], 'height': self._sensor_data['height'], 'fov': self._sensor_data['fov'],
-                    'id': 'depth_rear'
-                    },
-                {
-                    'type': 'sensor.camera.rgb',
-                    'x': 1.3, 'y': 0.0, 'z': 2.3,
-                    'roll': 0.0, 'pitch': 0.0, 'yaw': -60.0,
-                    'width': self._sensor_data['width'], 'height': self._sensor_data['height'], 'fov': self._sensor_data['fov'],
-                    'id': 'rgb_left'
-                    },
-                {
-                    'type': 'sensor.camera.semantic_segmentation',
-                    'x': 1.3, 'y': 0.0, 'z': 2.3,
-                    'roll': 0.0, 'pitch': 0.0, 'yaw': -60.0,
-                    'width': self._sensor_data['width'], 'height': self._sensor_data['height'], 'fov': self._sensor_data['fov'],
-                    'id': 'seg_left'
-                    },
-                {
-                    'type': 'sensor.camera.depth',
-                    'x': 1.3, 'y': 0.0, 'z': 2.3,
-                    'roll': 0.0, 'pitch': 0.0, 'yaw': -60.0,
-                    'width': self._sensor_data['width'], 'height': self._sensor_data['height'], 'fov': self._sensor_data['fov'],
-                    'id': 'depth_left'
-                    },
-                {
-                    'type': 'sensor.camera.rgb',
-                    'x': 1.3, 'y': 0.0, 'z': 2.3,
-                    'roll': 0.0, 'pitch': 0.0, 'yaw': 60.0,
-                    'width': self._sensor_data['width'], 'height': self._sensor_data['height'], 'fov': self._sensor_data['fov'],
-                    'id': 'rgb_right'
-                    },
-                {
-                    'type': 'sensor.camera.semantic_segmentation',
-                    'x': 1.3, 'y': 0.0, 'z': 2.3,
-                    'roll': 0.0, 'pitch': 0.0, 'yaw': 60.0,
-                    'width': self._sensor_data['width'], 'height': self._sensor_data['height'], 'fov': self._sensor_data['fov'],
-                    'id': 'seg_right'
-                    },
-                {
-                    'type': 'sensor.camera.depth',
-                    'x': 1.3, 'y': 0.0, 'z': 2.3,
-                    'roll': 0.0, 'pitch': 0.0, 'yaw': 60.0,
-                    'width': self._sensor_data['width'], 'height': self._sensor_data['height'], 'fov': self._sensor_data['fov'],
-                    'id': 'depth_right'
-                    },
                 {   
                     'type': 'sensor.lidar.ray_cast',
                     'x': 1.3, 'y': 0.0, 'z': 2.5,
                     'roll': 0.0, 'pitch': 0.0, 'yaw': -90.0,
                     'id': 'lidar'
-                    },
-                {   
-                    'type': 'sensor.lidar.ray_cast_semantic',
-                    'x': 1.3, 'y': 0.0, 'z': 2.5,
-                    'roll': 0.0, 'pitch': 0.0, 'yaw': -90.0,
-                    'id': 'semantic_lidar'
                     },
                 {
                     'type': 'sensor.other.imu',
