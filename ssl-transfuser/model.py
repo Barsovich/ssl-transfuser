@@ -344,21 +344,20 @@ class Encoder(nn.Module):
             image_features = image_features + image_features_layer1
             lidar_features = lidar_features + lidar_features_layer1
 
-        image_features = self.image_encoder.features.layer2(image_features)
-        lidar_features = self.lidar_encoder._model.layer2(lidar_features)
+        image_features_before_fusion = self.image_encoder.features.layer2(image_features)
+        lidar_features_before_fusion = self.lidar_encoder._model.layer2(lidar_features)
 
-        if self.use_early_transformers:
-            # fusion at (B, 128, 32, 32)
-            image_embd_layer2 = self.avgpool(image_features)
-            lidar_embd_layer2 = self.avgpool(lidar_features)
-            image_features_layer2, lidar_features_layer2 = self.transformer2(image_embd_layer2, lidar_embd_layer2, velocity)
-            image_features_layer2 = F.interpolate(image_features_layer2, scale_factor=4, mode='bilinear')
-            lidar_features_layer2 = F.interpolate(lidar_features_layer2, scale_factor=4, mode='bilinear')
-            image_features = image_features + image_features_layer2
-            lidar_features = lidar_features + lidar_features_layer2
+        # fusion at (B, 128, 32, 32)
+        image_embd_layer2 = self.avgpool(image_features_before_fusion)
+        lidar_embd_layer2 = self.avgpool(lidar_features_before_fusion)
+        image_features_layer2, lidar_features_layer2 = self.transformer2(image_embd_layer2, lidar_embd_layer2, velocity)
+        image_features_layer2 = F.interpolate(image_features_layer2, scale_factor=4, mode='bilinear')
+        lidar_features_layer2 = F.interpolate(lidar_features_layer2, scale_factor=4, mode='bilinear')
+        image_features_after_fusion = image_features_before_fusion + image_features_layer2
+        lidar_features_after_fusion = lidar_features_before_fusion + lidar_features_layer2
 
-        image_features = self.image_encoder.features.layer3(image_features)
-        lidar_features = self.lidar_encoder._model.layer3(lidar_features)
+        image_features = self.image_encoder.features.layer3(image_features_after_fusion)
+        lidar_features = self.lidar_encoder._model.layer3(lidar_features_after_fusion)
 
         if self.use_early_transformers:
             # fusion at (B, 256, 16, 16)
@@ -370,15 +369,15 @@ class Encoder(nn.Module):
             image_features = image_features + image_features_layer3
             lidar_features = lidar_features + lidar_features_layer3
 
-        image_features_before_last_fusion = self.image_encoder.features.layer4(image_features)
-        lidar_features_before_last_fusion = self.lidar_encoder._model.layer4(lidar_features)
+        image_features = self.image_encoder.features.layer4(image_features)
+        lidar_features = self.lidar_encoder._model.layer4(lidar_features)
 
         # fusion at (B, 512, 8, 8)
-        image_embd_layer4 = self.avgpool(image_features_before_last_fusion)
-        lidar_embd_layer4 = self.avgpool(lidar_features_before_last_fusion)
+        image_embd_layer4 = self.avgpool(image_features)
+        lidar_embd_layer4 = self.avgpool(lidar_features)
         image_features_layer4, lidar_features_layer4 = self.transformer4(image_embd_layer4, lidar_embd_layer4, velocity)
-        image_features = image_features_before_last_fusion + image_features_layer4
-        lidar_features = lidar_features_before_last_fusion + lidar_features_layer4
+        image_features = image_features + image_features_layer4
+        lidar_features = lidar_features + lidar_features_layer4
 
         image_features = self.image_encoder.features.avgpool(image_features)
         image_features = torch.flatten(image_features, 1)
@@ -390,7 +389,7 @@ class Encoder(nn.Module):
         fused_features = torch.cat([image_features, lidar_features], dim=1)
         fused_features = torch.sum(fused_features, dim=1)
 
-        return fused_features, image_features_before_last_fusion, lidar_features_before_last_fusion
+        return fused_features, image_features_before_fusion, lidar_features_before_fusion, image_features_after_fusion, lidar_features_after_fusion
 
 
 class PIDController(object):
@@ -445,11 +444,15 @@ class TransFuser(nn.Module):
         self.decoder = nn.GRUCell(input_size=2, hidden_size=64).to(self.device)
         self.output = nn.Linear(64, 2).to(self.device)
 
-        # TODO: Match the feature dimension vs classifier inout dimension
-        self.lidar_decoder = fcn_resnet50(num_classes=1).classifier
-        self.image_decoder = fcn_resnet50(num_classes=3).classifier
-        self.next_frame_lidar_decoder = fcn_resnet50(num_classes=1).classifier
-        self.next_frame_image_decoder = fcn_resnet50(num_classes=3).classifier
+        # TODO: Discuss this with the team
+        self.lidar_decoder = nn.Sequential(nn.Conv1d(128, 2048),
+                                           fcn_resnet50(num_classes=1).classifier).to(self.device)
+        self.image_decoder = nn.Sequential(nn.Conv1d(128, 2048),
+                                           fcn_resnet50(num_classes=3).classifier).to(self.device)
+        self.next_frame_lidar_decoder = nn.Sequential(nn.Conv1d(256, 2048), 
+                                                      fcn_resnet50(num_classes=1).classifier).to(self.device)
+        self.next_frame_image_decoder = nn.Sequential(nn.Conv1d(256, 2048),
+                                                      fcn_resnet50(num_classes=3).classifier).to(self.device)
         
     def forward(self, image_list, lidar_list, target_point, velocity):
         '''
@@ -460,7 +463,8 @@ class TransFuser(nn.Module):
             target_point (tensor): goal location registered to ego-frame
             velocity (tensor): input velocity from speedometer
         '''
-        fused_features, image_features, lidar_features = self.encoder(image_list, lidar_list, velocity)
+        fused_features, image_features_before_fusion, lidar_features_before_fusion, image_features_after_fusion, lidar_features_after_fusion = self.encoder(
+            image_list, lidar_list, velocity)
         z = self.join(fused_features)
 
         output_wp = list()
@@ -479,10 +483,11 @@ class TransFuser(nn.Module):
 
         pred_wp = torch.stack(output_wp, dim=1)
 
-        image_to_lidar_prediction = self.lidar_decoder(image_features)
-        lidar_to_image_prediction = self.image_decoder(lidar_features)
-        next_frame_lidar_prediction = self.next_frame_lidar_decoder(fused_features)
-        next_frame_image_prediction = self.next_frame_image_decoder(fused_features)
+        image_to_lidar_prediction = self.lidar_decoder(image_features_before_fusion)
+        lidar_to_image_prediction = self.image_decoder(lidar_features_before_fusion)
+        high_dim_features_after_fusion = torch.cat([image_features_after_fusion, lidar_features_after_fusion], dim=1)  # TODO: Check dimension here
+        next_frame_lidar_prediction = self.next_frame_lidar_decoder(high_dim_features_after_fusion)
+        next_frame_image_prediction = self.next_frame_image_decoder(high_dim_features_after_fusion)
 
         return pred_wp, image_to_lidar_prediction, lidar_to_image_prediction, next_frame_lidar_prediction, next_frame_image_prediction
 

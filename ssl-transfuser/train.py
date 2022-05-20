@@ -120,13 +120,19 @@ class Engine(object):
 			gt_waypoints = torch.stack(gt_waypoints, dim=1).to(args.device, dtype=torch.float32)
 
 			
-			loss = F.l1_loss(pred_wp, gt_waypoints, reduction='none').mean()
+			original_loss = F.l1_loss(pred_wp, gt_waypoints, reduction='none').mean()
 
 			# Here we assume that the the sequence length of input is one
-			loss += args.next_frame_prediction_loss_coef * F.l1_loss(next_frame_image_prediction, next_fronts[0])
-			loss += args.next_frame_prediction_loss_coef * F.l1_loss(next_frame_lidar_prediction, next_lidars[0])
-			loss += args.cross_modal_prediction_loss_coef * F.l1_loss(image_to_lidar_prediction, lidars[0])
-			loss += args.cross_modal_prediction_loss_coef * F.l1_loss(lidar_to_image_prediction, fronts[0])
+			next_frame_image_prediction_loss = args.next_frame_prediction_loss_coef * F.l1_loss(next_frame_image_prediction, next_fronts[0])
+			next_frame_lidar_prediction_loss = args.next_frame_prediction_loss_coef * F.l1_loss(next_frame_lidar_prediction, next_lidars[0])
+			image_to_lidar_prediction_loss =  args.cross_modal_prediction_loss_coef * F.l1_loss(image_to_lidar_prediction, lidars[0])
+			lidar_to_image_prediction_loss = args.cross_modal_prediction_loss_coef * F.l1_loss(lidar_to_image_prediction, fronts[0])
+
+			loss = original_loss + \
+				next_frame_image_prediction_loss + \
+        next_frame_lidar_prediction_loss + \
+        image_to_lidar_prediction_loss + \
+				lidar_to_image_prediction_loss
 
 			loss.backward()
 			loss_epoch += float(loss.item())
@@ -135,8 +141,12 @@ class Engine(object):
 			optimizer.step()
 
 			writer.add_scalar('train_loss', loss.item(), self.cur_iter)
+			writer.add_scalar('original_loss', original_loss.item(), self.cur_iter)
+			writer.add_scalar('next_frame_image_prediction_loss', next_frame_image_prediction_loss.item(), self.cur_iter)
+			writer.add_scalar('next_frame_lidar_prediction_loss', next_frame_lidar_prediction_loss.item(), self.cur_iter)
+			writer.add_scalar('image_to_lidar_prediction_loss', image_to_lidar_prediction_loss.item(), self.cur_iter)
+			writer.add_scalar('lidar_to_image_prediction_loss', lidar_to_image_prediction_loss.item(), self.cur_iter)
 			self.cur_iter += 1
-		
 		
 		loss_epoch = loss_epoch / num_batches
 		self.train_loss.append(loss_epoch)
