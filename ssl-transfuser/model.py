@@ -445,13 +445,13 @@ class TransFuser(nn.Module):
         self.output = nn.Linear(64, 2).to(self.device)
 
         # TODO: Discuss this with the team
-        self.lidar_decoder = nn.Sequential(nn.Conv1d(128, 2048),
-                                           fcn_resnet50(num_classes=1).classifier).to(self.device)
-        self.image_decoder = nn.Sequential(nn.Conv1d(128, 2048),
+        self.lidar_decoder = nn.Sequential(nn.Conv2d(128, 2048, 1),
+                                           fcn_resnet50(num_classes=2).classifier).to(self.device)
+        self.image_decoder = nn.Sequential(nn.Conv2d(128, 2048, 1),
                                            fcn_resnet50(num_classes=3).classifier).to(self.device)
-        self.next_frame_lidar_decoder = nn.Sequential(nn.Conv1d(256, 2048), 
-                                                      fcn_resnet50(num_classes=1).classifier).to(self.device)
-        self.next_frame_image_decoder = nn.Sequential(nn.Conv1d(256, 2048),
+        self.next_frame_lidar_decoder = nn.Sequential(nn.Conv2d(256, 2048, 1), 
+                                                      fcn_resnet50(num_classes=2).classifier).to(self.device)
+        self.next_frame_image_decoder = nn.Sequential(nn.Conv2d(256, 2048, 1),
                                                       fcn_resnet50(num_classes=3).classifier).to(self.device)
         
     def forward(self, image_list, lidar_list, target_point, velocity):
@@ -484,10 +484,21 @@ class TransFuser(nn.Module):
         pred_wp = torch.stack(output_wp, dim=1)
 
         image_to_lidar_prediction = self.lidar_decoder(image_features_before_fusion)
+        image_to_lidar_prediction = F.interpolate(
+            image_to_lidar_prediction, size=lidar_list[0][0,0].shape, mode="bilinear", align_corners=False)
+
         lidar_to_image_prediction = self.image_decoder(lidar_features_before_fusion)
+        lidar_to_image_prediction = F.interpolate(
+            lidar_to_image_prediction, size=image_list[0][0, 0].shape, mode="bilinear", align_corners=False)
+
         high_dim_features_after_fusion = torch.cat([image_features_after_fusion, lidar_features_after_fusion], dim=1)  # TODO: Check dimension here
         next_frame_lidar_prediction = self.next_frame_lidar_decoder(high_dim_features_after_fusion)
+        next_frame_lidar_prediction = F.interpolate(
+            next_frame_lidar_prediction, size=lidar_list[0][0, 0].shape, mode="bilinear", align_corners=False)
+
         next_frame_image_prediction = self.next_frame_image_decoder(high_dim_features_after_fusion)
+        next_frame_image_prediction = F.interpolate(
+            next_frame_image_prediction, size=image_list[0][0, 0].shape, mode="bilinear", align_corners=False)
 
         return pred_wp, image_to_lidar_prediction, lidar_to_image_prediction, next_frame_lidar_prediction, next_frame_image_prediction
 
