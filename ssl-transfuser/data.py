@@ -7,6 +7,8 @@ import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 import sys
+import logging
+logging.basicConfig(level=logging.INFO)
 
 class CARLA_Data(Dataset):
 
@@ -38,6 +40,7 @@ class CARLA_Data(Dataset):
         self.velocity = []
         
         for sub_root in tqdm(root, file=sys.stdout):
+            logging.info(f"Loading data from {sub_root}")
             preload_file = os.path.join(sub_root, 'rg_lidar_diag_pl_'+str(self.seq_len)+'_'+str(self.pred_len)+'.npy')
 
             # dump to npy if no preload
@@ -63,7 +66,7 @@ class CARLA_Data(Dataset):
                 routes = [folder for folder in root_files if not os.path.isfile(os.path.join(sub_root,folder))]
                 for route in routes:
                     route_dir = os.path.join(sub_root, route)
-                    print(route_dir)
+                    logging.info("Route directory: {}".format(route_dir))
                     # subtract final frames (pred_len) since there are no future waypoints
                     # first frame of sequence not used
                     
