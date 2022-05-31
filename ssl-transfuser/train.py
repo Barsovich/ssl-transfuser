@@ -1,3 +1,4 @@
+import inspect 
 import argparse
 import json
 import os
@@ -11,6 +12,7 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, Subset
 from torch.utils.tensorboard import SummaryWriter
+import wandb
 import torch.nn.functional as F
 
 torch.backends.cudnn.benchmark = True
@@ -51,13 +53,10 @@ parser.add_argument(
 parser.add_argument('--debug', action='store_true', default=False, help="Debug mode (subsamples data for development)")
 parser.set_defaults(debug=False)
 
-
-
 args = parser.parse_args()
 args.logdir = os.path.join(args.logdir, args.id)
 
 writer = SummaryWriter(log_dir=args.logdir)
-
 
 class Engine(object):
     """Engine that runs training and inference.
@@ -208,24 +207,30 @@ class Engine(object):
             num_batches += 1
             optimizer.step()
 
-            writer.add_scalar("train_loss", loss.item(), self.cur_iter)
-            writer.add_scalar("original_loss", original_loss.item(), self.cur_iter)
-            writer.add_scalar(
+
+            def log_to_wandb_and_tensorboard(key, value, iter):
+                writer.add_scalar(key, value, iter)
+                wandb.log({key: value}, step=iter)
+
+            log_to_wandb_and_tensorboard("train_loss", loss.item(), self.cur_iter)
+            log_to_wandb_and_tensorboard("original_loss", original_loss.item(), self.cur_iter)
+            log_to_wandb_and_tensorboard(
                 "next_frame_image_prediction_loss",
                 next_frame_image_prediction_loss.item(),
                 self.cur_iter,
             )
-            writer.add_scalar(
+            log_to_wandb_and_tensorboard("next_frame_image_prediction_loss", next_frame_image_prediction_loss.item(), self.cur_iter)
+            log_to_wandb_and_tensorboard(
                 "next_frame_lidar_prediction_loss",
                 next_frame_lidar_prediction_loss.item(),
                 self.cur_iter,
             )
-            writer.add_scalar(
+            log_to_wandb_and_tensorboard(
                 "image_to_lidar_prediction_loss",
                 image_to_lidar_prediction_loss.item(),
                 self.cur_iter,
             )
-            writer.add_scalar(
+            log_to_wandb_and_tensorboard(
                 "lidar_to_image_prediction_loss",
                 lidar_to_image_prediction_loss.item(),
                 self.cur_iter,
@@ -362,6 +367,15 @@ class Engine(object):
 
 # Config
 config = GlobalConfig()
+
+def get_config_dict(config):
+    attributes = inspect.getmembers(config, lambda a:not(inspect.isroutine(a)))
+    attributes = [a for a in attributes if not(a[0].startswith('__') and a[0].endswith('__'))]
+    return {k:v for k,v in attributes}
+
+wandb.init(project="transfuser", config=get_config_dict(config))
+wandb.config.update(args.__dict__)
+
 logging.info(f"config.train_data: {config.train_data}")
 logging.info(f"config.val_data: {config.val_data}")
 
