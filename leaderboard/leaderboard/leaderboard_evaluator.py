@@ -13,6 +13,7 @@ Provisional code to evaluate Autonomous Agents for the CARLA Autonomous Driving 
 from __future__ import print_function
 
 import traceback
+import logging
 import argparse
 from argparse import RawTextHelpFormatter
 from datetime import datetime
@@ -38,6 +39,7 @@ from leaderboard.autoagents.agent_wrapper import  AgentWrapper, AgentError
 from leaderboard.utils.statistics_manager import StatisticsManager
 from leaderboard.utils.route_indexer import RouteIndexer
 
+logging.basicConfig(level=logging.INFO)
 
 sensors_to_icons = {
     'sensor.camera.rgb':        'carla_camera',
@@ -400,6 +402,7 @@ class LeaderboardEvaluator(object):
         route_indexer = RouteIndexer(args.routes, args.scenarios, args.repetitions)
 
         if args.resume:
+            logging.info(f"Resuming from checkpoint {args.checkpoint}")
             route_indexer.resume(args.checkpoint)
             self.statistics_manager.resume(args.checkpoint)
         else:
