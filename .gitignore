@@ -132,3 +132,6 @@ data
 data_05_29
 ssl-transfuser/log
 ssl-transfuser/wandb
+ssl_transfuser/log
+ssl_transfuser/wandb
+wandb/

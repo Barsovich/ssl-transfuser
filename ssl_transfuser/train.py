@@ -16,10 +16,12 @@ import wandb
 import torch.nn.functional as F
 
 torch.backends.cudnn.benchmark = True
+import sys
 
-from config import GlobalConfig
-from model import TransFuser
-from data import CARLA_Data
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from ssl_transfuser.config import GlobalConfig
+from ssl_transfuser.model import TransFuser
+from ssl_transfuser.data import CARLA_Data
 
 
 def get_config_dict(config):
@@ -46,6 +48,7 @@ class Engine(object):
         config,
         dataloader_train,
         dataloader_val,
+        writer,
         cur_epoch=0,
         cur_iter=0,
     ):
@@ -54,6 +57,7 @@ class Engine(object):
         self.config = config
         self.dataloader_train = dataloader_train
         self.dataloader_val = dataloader_val
+        self.writer = writer
         self.cur_epoch = cur_epoch
         self.cur_iter = cur_iter
         self.bestval_epoch = cur_epoch
@@ -111,7 +115,7 @@ class Engine(object):
         lidar_to_image_prediction_loss,
     ):
         def log_to_wandb_and_tensorboard(key, value, iter):
-            writer.add_scalar(key, value, iter)
+            self.writer.add_scalar(key, value, iter)
             wandb.log({key: value}, step=iter)
 
         log_to_wandb_and_tensorboard("train_loss", loss.item(), self.cur_iter)
@@ -366,7 +370,7 @@ class Engine(object):
                 + f" Wp: {wp_loss:3.3f}"
             )
 
-            writer.add_scalar("val_loss", wp_loss, self.cur_epoch)
+            self.writer.add_scalar("val_loss", wp_loss, self.cur_epoch)
             wandb.log({"val_loss": wp_loss}, step=self.cur_iter)
 
             self.val_loss.append(wp_loss)
@@ -448,12 +452,12 @@ def load_data(config, args):
     return dataloader_train, dataloader_val
 
 
-def load_model(config, args, dataloader_train, dataloader_val):
+def load_model(config, args, dataloader_train, dataloader_val, writer):
     # Model
     logging.info("Initializing model")
     model = TransFuser(config, args.device)
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
-    trainer = Engine(model, optimizer, config, dataloader_train, dataloader_val)
+    trainer = Engine(model, optimizer, config, dataloader_train, dataloader_val, writer)
 
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
     params = sum([np.prod(p.size()) for p in model_parameters])
@@ -494,6 +498,9 @@ def log_args(args):
 
 
 def run_training(args):
+    torch.cuda.empty_cache()
+    writer = SummaryWriter(log_dir=args.logdir)
+
     config = GlobalConfig()
 
     wandb.init(project="transfuser", config=get_config_dict(config))
@@ -504,7 +511,7 @@ def run_training(args):
 
     dataloader_train, dataloader_val = load_data(config, args)
     model, optimizer, trainer = load_model(
-        config, args, dataloader_train, dataloader_val
+        config, args, dataloader_train, dataloader_val, writer
     )
     log_args(args)
 
@@ -561,6 +568,4 @@ def setup_parser():
 
 if __name__ == "__main__":
     args = setup_parser()
-    torch.cuda.empty_cache()
-    writer = SummaryWriter(log_dir=args.logdir)
     run_training(args)
