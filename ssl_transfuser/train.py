@@ -281,6 +281,7 @@ class Engine(object):
             self.optimizer.step()
 
             self.log_losses(
+                loss,
                 waypoint_loss,
                 next_frame_image_prediction_loss,
                 next_frame_lidar_prediction_loss,
