@@ -135,3 +135,5 @@ ssl-transfuser/wandb
 ssl_transfuser/log
 ssl_transfuser/wandb
 wandb/
+log/
+slurm
