@@ -12,25 +12,23 @@ class GlobalConfig:
     seq_len = 1  # input timesteps
     pred_len = 4  # future waypoints predicted
 
-    # root_dir = '/mnt/qb/geiger/kchitta31/data_06_21'
     root_dir = "/home/gsimmons/ssl-transfuser/data/"
     train_towns = ["Town01", "Town02", "Town03", "Town04", "Town06", "Town07", "Town10"]
 
     val_towns = ["Town05"]
     train_data, val_data = [], []
+
     for town in train_towns:
         for path in Path(root_dir).glob(f"*{town}*"):
             logging.info(f"Adding {path} to training data")
             train_data.append(str(path))
-        # train_data.append(os.path.join(root_dir, town + "_tiny"))
-        # train_data.append(os.path.join(root_dir, town + "_short"))
+
     for town in val_towns:
         for path in Path(root_dir).glob(f"*{town}*"):
             logging.info(f"Adding {path} to validation data")
             val_data.append(str(path))
 
     # visualizing transformer attention maps
-    # viz_root = '/mnt/qb/geiger/kchitta31/data_06_21'
     viz_root = "/home/gsimmons/ssl-transfuser/data/"
     viz_towns = ["Town05_tiny"]
     viz_data = []
