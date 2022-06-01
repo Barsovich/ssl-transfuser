@@ -1,6 +1,8 @@
 import inspect
+from pathlib import Path
 import argparse
 import json
+from multiprocessing.sharedctypes import Value
 import os
 from tqdm import tqdm
 import logging
@@ -81,7 +83,8 @@ class Engine(object):
         waypoint_loss = F.l1_loss(pred_wp, gt_waypoints, reduction="none").mean()
 
         next_frame_image_prediction_loss = (
-            args.next_frame_prediction_loss_coef * args.image_loss_coef
+            args.next_frame_prediction_loss_coef
+            * args.image_loss_coef
             * F.l1_loss(next_frame_image_prediction, gt_next_frame_image)
         )
         next_frame_lidar_prediction_loss = (
@@ -89,11 +92,12 @@ class Engine(object):
             * F.l1_loss(next_frame_lidar_prediction, gt_next_frame_lidar)
         )
         image_to_lidar_prediction_loss = (
-            args.cross_modal_prediction_loss_coef 
+            args.cross_modal_prediction_loss_coef
             * F.l1_loss(image_to_lidar_prediction, gt_curr_frame_lidar)
         )
         lidar_to_image_prediction_loss = (
-            args.cross_modal_prediction_loss_coef * args.image_loss_coef
+            args.cross_modal_prediction_loss_coef
+            * args.image_loss_coef
             * F.l1_loss(lidar_to_image_prediction, gt_curr_frame_image)
         )
 
@@ -503,6 +507,10 @@ def run_training(args):
     writer = SummaryWriter(log_dir=args.logdir)
 
     config = GlobalConfig()
+
+    logging.info(f"config.root_dir: {config.root_dir}")
+    if not Path(config.root_dir).is_dir():
+        raise ValueError(f"{config.root_dir} is not a valid directory")
 
     wandb.init(project="transfuser", config=get_config_dict(config))
     wandb.config.update(args.__dict__)
