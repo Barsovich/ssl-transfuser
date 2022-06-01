@@ -46,8 +46,8 @@ python ssl_transfuser/train.py \\
 MAX_STEPS = 600
 
 if __name__ == "__main__":
-    NEXT_FRAME_COEF_VALUES = [0.0, 0.5, 1.0]
-    CROSS_MODAL_COEF_VALUES = [0.0, 0.5, 1.0]
+    NEXT_FRAME_COEF_VALUES = [0.0, 0.1, 0.5, 1.0, 5.0, 10.0]
+    CROSS_MODAL_COEF_VALUES = [0.0, 0.1, 0.5, 1.0, 5.0, 10.0]
 
     sweep_id = "'" + str(datetime.datetime.now()) + "'"
 
