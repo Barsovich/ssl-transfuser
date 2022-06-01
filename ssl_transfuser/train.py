@@ -466,6 +466,7 @@ def load_data(config, args):
 def load_model(config, args, dataloader_train, dataloader_val, writer):
     # Model
     logging.info("Initializing model")
+    logging.info("Args.resume: {}".format(args.resume))
     model = TransFuser(config, args.device)
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
     trainer = Engine(model, optimizer, config, dataloader_train, dataloader_val, writer)
@@ -596,10 +597,10 @@ def setup_parser():
         help="Debug mode (subsamples data for development)",
     )
     parser.add_argument(
-        "--from-scratch",
+        "--resume",
         action="store_true",
         default=False,
-        help="Do not resume training (deletes old logdir)",
+        help="Resume from checkpoint",
     )
     parser.add_argument(
         "--max-steps",
