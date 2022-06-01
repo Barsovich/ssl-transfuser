@@ -6,6 +6,8 @@ import logging
 from pathlib import Path
 import os
 import subprocess
+import pandas as pd
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -45,6 +47,20 @@ python ssl_transfuser/train.py \\
 
 MAX_STEPS = 600
 
+def get_dependency_jobid(max_concurrent_jobs):
+    output = subprocess.run(["squeue"], capture_output=True)
+
+    with open("tmp.tsv", "w") as f:
+        f.write(output.stdout.decode("utf-8"))
+    sq = pd.read_csv("tmp.tsv", sep="\t")
+
+    if len(sq[sq.USER=="gsimmons"]) >= max_concurrent_jobs:
+        jobid = sq[sq.USER=="gsimmons"]["JOBID"].max()
+    else:
+        jobid = None
+
+    return jobid
+
 if __name__ == "__main__":
     NEXT_FRAME_COEF_VALUES = [0.0, 0.1, 0.5, 1.0, 5.0, 10.0]
     CROSS_MODAL_COEF_VALUES = [0.0, 0.1, 0.5, 1.0, 5.0, 10.0]
@@ -65,11 +81,12 @@ if __name__ == "__main__":
             )
             with open(script_path, "w") as f:
                 logging.info(f"Writing script to {script_path}")
-                print(script)
                 f.write(script)
-                print(str(script_path.absolute()))
             if SUBMIT:
                 time.sleep(1)
-                cmd = ["sbatch", str(script_path.absolute())]
-                print(" ".join(cmd))
+                dependency_jobid = get_dependency_jobid(max_concurrent_jobs=3)
+                if dependency_jobid:
+                    cmd = ["sbatch", f"--dependency=afterany:{dependency_jobid}", str(script_path.absolute())]
+                else:
+                    cmd = ["sbatch", str(script_path.absolute())]
                 subprocess.run(cmd)
