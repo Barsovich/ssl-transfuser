@@ -616,6 +616,7 @@ def setup_parser():
 
     args = parser.parse_args()
     args.logdir = os.path.join(args.logdir, args.id)
+    args.config_str = f"nf_{args.next_frame_prediction_loss_coef}_cm_{args.cross_modal_prediction_loss_coef}_img_{args.image_loss_coef}"
     return args
 
 
