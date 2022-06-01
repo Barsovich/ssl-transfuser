@@ -1,5 +1,7 @@
+from re import S
 from ssl_transfuser.train import setup_parser, run_training
 import time
+import datetime
 import logging
 from pathlib import Path
 import os
@@ -29,22 +31,26 @@ cd /home/gsimmons/ssl-transfuser/ && \\
 pwd && \\
 conda activate transfuser && \\
 python ssl_transfuser/train.py \\
-  --debug \\
   --epochs 10 \\
   --val_every 1 \\
   --next_frame_prediction_loss_coef {next_frame_coef} \\
   --cross_modal_prediction_loss_coef {cross_modal_coef} \\
+  --sweep_id {sweep_id} \\
 """
 
 
 if __name__ == "__main__":
-    NEXT_FRAME_COEF_VALUES = [0.0, 1.0]
-    CROSS_MODAL_COEF_VALUES = [0.0, 1.0]
+    NEXT_FRAME_COEF_VALUES = [0.0, 0.5, 1.0]
+    CROSS_MODAL_COEF_VALUES = [0.0, 0.5, 1.0]
+
+    sweep_id = str(datetime.datetime.now())
 
     for next_frame_coef in NEXT_FRAME_COEF_VALUES:
         for cross_modal_coef in CROSS_MODAL_COEF_VALUES:
             script = SLURM_SCRIPT.format(
-                next_frame_coef=next_frame_coef, cross_modal_coef=cross_modal_coef
+                next_frame_coef=next_frame_coef,
+                cross_modal_coef=cross_modal_coef,
+                sweep_id=sweep_id,
             )
             script_path = (
                 Path(SLURM_DIR)
