@@ -159,7 +159,8 @@ class Engine(object):
 
         # Train loop
         for data in tqdm(self.dataloader_train):
-
+            if self.cur_iter >= args.max_steps:
+                break
             # efficiently zero gradients
             for p in self.model.parameters():
                 p.grad = None
@@ -369,6 +370,11 @@ class Engine(object):
 
                 num_batches += 1
 
+                if self.cur_iter % args.val_every == 0:
+                    logging.info("Running validation")
+                    self.validate()
+                    self.save()
+
             wp_loss = wp_epoch / float(num_batches)
             tqdm.write(
                 f"Epoch {self.cur_epoch:03d}, Batch {batch_num:03d}:"
@@ -470,28 +476,37 @@ def load_model(config, args, dataloader_train, dataloader_val, writer):
 
     # Create logdir
     if not os.path.isdir(args.logdir):
+        if args.resume:
+            raise ValueError("Cannot resume training, logdir does not exist")
         os.makedirs(args.logdir)
         logging.info("Created dir:", args.logdir)
 
     elif os.path.isfile(os.path.join(args.logdir, "recent.log")):
-        logging.info("Loading checkpoint from " + args.logdir)
-        with open(os.path.join(args.logdir, "recent.log"), "r") as f:
-            log_table = json.load(f)
+        if args.resume:
+            logging.info("Loading checkpoint from " + args.logdir)
+            with open(os.path.join(args.logdir, "recent.log"), "r") as f:
+                log_table = json.load(f)
 
-        # Load variables
-        trainer.cur_epoch = log_table["epoch"]
-        if "iter" in log_table:
-            trainer.cur_iter = log_table["iter"]
+            # Load variables
+            trainer.cur_epoch = log_table["epoch"]
+            if "iter" in log_table:
+                trainer.cur_iter = log_table["iter"]
 
-        trainer.bestval = log_table["bestval"]
-        trainer.train_loss = log_table["train_loss"]
-        trainer.val_loss = log_table["val_loss"]
+            trainer.bestval = log_table["bestval"]
+            trainer.train_loss = log_table["train_loss"]
+            trainer.val_loss = log_table["val_loss"]
 
-        # Load checkpoint
-        model.load_state_dict(torch.load(os.path.join(args.logdir, "model.pth")))
-        optimizer.load_state_dict(
-            torch.load(os.path.join(args.logdir, "recent_optim.pth"))
-        )
+            # Load checkpoint
+            model.load_state_dict(torch.load(os.path.join(args.logdir, "model.pth")))
+            optimizer.load_state_dict(
+                torch.load(os.path.join(args.logdir, "recent_optim.pth"))
+            )
+        else:
+            # remove old logdir
+            logging.info("Removing old logdir")
+            os.system("rm -rf " + args.logdir)
+            os.makedirs(args.logdir)
+            logging.info("Created dir:", args.logdir)
 
     return model, optimizer, trainer
 
@@ -530,9 +545,6 @@ def run_training(args):
     logging.info("Start training")
     for epoch in range(trainer.cur_epoch, args.epochs):
         trainer.train()
-        if epoch % args.val_every == 0:
-            trainer.validate()
-            trainer.save()
 
 
 def setup_parser():
@@ -582,6 +594,18 @@ def setup_parser():
         action="store_true",
         default=False,
         help="Debug mode (subsamples data for development)",
+    )
+    parser.add_argument(
+        "--from-scratch",
+        action="store_true",
+        default=False,
+        help="Do not resume training (deletes old logdir)",
+    )
+    parser.add_argument(
+        "--max-steps",
+        type=int,
+        default=2000,
+        help="Maximum number of gradient updates for training",
     )
     parser.set_defaults(debug=False)
 

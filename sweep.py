@@ -17,8 +17,8 @@ SLURM_SCRIPT = """#!/bin/bash
 #SBATCH --job-name=transfuser_train
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=gsimmons@ucdavis.edu
-#SBATCH --output=/home/gsimmons/logs/transfuser_next_frame_{next_frame_coef}_cross_modal_{cross_modal_coef}.out
-#SBATCH --error=/home/gsimmons/logs/transfuser_next_frame_{next_frame_coef}_cross_modal_{cross_modal_coef}.err
+#SBATCH --output=/home/gsimmons/logs/transfuser_next_frame_{next_frame_coef}_cross_modal_{cross_modal_coef}.%j.out
+#SBATCH --error=/home/gsimmons/logs/transfuser_next_frame_{next_frame_coef}_cross_modal_{cross_modal_coef}.%j.err
 #SBATCH --partition=compute
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
@@ -32,13 +32,15 @@ pwd && \\
 conda activate transfuser && \\
 python ssl_transfuser/train.py \\
   --epochs 10 \\
-  --val_every 1 \\
+  --val_every 100 \\
   --next_frame_prediction_loss_coef {next_frame_coef} \\
   --cross_modal_prediction_loss_coef {cross_modal_coef} \\
   --sweep_id {sweep_id} \\
+  --max-steps {max_steps} \\
   --logdir /home/gsimmons/ssl-transfuser/logs/transfuser_next_frame_{next_frame_coef}_cross_modal_{cross_modal_coef} \\
 """
 
+MAX_STEPS = 600
 
 if __name__ == "__main__":
     NEXT_FRAME_COEF_VALUES = [0.0, 0.5, 1.0]
@@ -52,6 +54,7 @@ if __name__ == "__main__":
                 next_frame_coef=next_frame_coef,
                 cross_modal_coef=cross_modal_coef,
                 sweep_id=sweep_id,
+                max_steps=MAX_STEPS,
             )
             script_path = (
                 Path(SLURM_DIR)
