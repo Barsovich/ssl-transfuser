@@ -12,13 +12,16 @@ logging.basicConfig(level=logging.INFO)
 SUBMIT = True
 
 SLURM_DIR = "./slurm/"
+
+# SBATCH --output=/home/gsimmons/logs/transfuser_%j_next_frame_{next_frame_coef}_cross_modal_{cross_modal_coef}.out
+# SBATCH --error=/home/gsimmons/logs/transfuser_%j_next_frame_{next_frame_coef}_cross_modal_{cross_modal_coef}.err
 SLURM_SCRIPT = """#!/bin/bash
 
 #SBATCH --job-name=transfuser_train
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=gsimmons@ucdavis.edu
-#SBATCH --output=/home/gsimmons/logs/transfuser_next_frame_{next_frame_coef}_cross_modal_{cross_modal_coef}.%j.out
-#SBATCH --error=/home/gsimmons/logs/transfuser_next_frame_{next_frame_coef}_cross_modal_{cross_modal_coef}.%j.err
+#SBATCH --output=/home/gsimmons/logs/transfuser.out
+#SBATCH --error=/home/gsimmons/logs/transfuser.err
 #SBATCH --partition=compute
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
