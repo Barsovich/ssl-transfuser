@@ -31,7 +31,7 @@ class GlobalConfig:
 
     # visualizing transformer attention maps
     # viz_root = '/mnt/qb/geiger/kchitta31/data_06_21'
-    viz_root = "/home/gsimmons/ssl-transfuser/data_05_29/"
+    viz_root = "/home/gsimmons/ssl-transfuser/data/"
     viz_towns = ["Town05_tiny"]
     viz_data = []
     for town in viz_towns:
