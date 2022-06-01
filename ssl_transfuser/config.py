@@ -13,7 +13,7 @@ class GlobalConfig:
     pred_len = 4  # future waypoints predicted
 
     # root_dir = '/mnt/qb/geiger/kchitta31/data_06_21'
-    root_dir = "/home/gsimmons/ssl-transfuser/data_05_29/"
+    root_dir = "/home/gsimmons/ssl-transfuser/data/"
     train_towns = ["Town01", "Town02", "Town03", "Town04", "Town06", "Town07", "Town10"]
 
     val_towns = ["Town05"]
