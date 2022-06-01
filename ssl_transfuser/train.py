@@ -81,7 +81,7 @@ class Engine(object):
         waypoint_loss = F.l1_loss(pred_wp, gt_waypoints, reduction="none").mean()
 
         next_frame_image_prediction_loss = (
-            args.next_frame_prediction_loss_coef
+            args.next_frame_prediction_loss_coef * args.image_loss_coef
             * F.l1_loss(next_frame_image_prediction, gt_next_frame_image)
         )
         next_frame_lidar_prediction_loss = (
@@ -89,11 +89,11 @@ class Engine(object):
             * F.l1_loss(next_frame_lidar_prediction, gt_next_frame_lidar)
         )
         image_to_lidar_prediction_loss = (
-            args.cross_modal_prediction_loss_coef
+            args.cross_modal_prediction_loss_coef 
             * F.l1_loss(image_to_lidar_prediction, gt_curr_frame_lidar)
         )
         lidar_to_image_prediction_loss = (
-            args.cross_modal_prediction_loss_coef
+            args.cross_modal_prediction_loss_coef * args.image_loss_coef
             * F.l1_loss(lidar_to_image_prediction, gt_curr_frame_image)
         )
 
@@ -516,6 +516,9 @@ def run_training(args):
     )
     log_args(args)
 
+    wandb.config.update({"len_train_data": len(dataloader_train)})
+    wandb.config.update({"len_val_data": len(dataloader_val)})
+
     logging.info("Start training")
     for epoch in range(trainer.cur_epoch, args.epochs):
         trainer.train()
@@ -553,6 +556,18 @@ def setup_parser():
         type=float,
         default=1,
         help="Coefficient of the next frame prediction loss.",
+    )
+    parser.add_argument(
+        "--image_loss_coef",
+        type=float,
+        default=0.1,
+        help="Coefficient to scale image losses",
+    )
+    parser.add_argument(
+        "--sweep_id",
+        type=str,
+        default=None,
+        help="Used to group runs from the same sweep",
     )
     parser.add_argument(
         "--debug",
