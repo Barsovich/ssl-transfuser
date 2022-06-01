@@ -301,7 +301,11 @@ class Engine(object):
                 self.validate()
                 self.save()
 
-        loss_epoch = loss_epoch / num_batches
+        if num_batches > 0:
+            loss_epoch = loss_epoch / num_batches
+        else:
+            loss_epoch = 0.0
+
         self.train_loss.append(loss_epoch)
         self.cur_epoch += 1
 
