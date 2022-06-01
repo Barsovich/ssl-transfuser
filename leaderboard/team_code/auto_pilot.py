@@ -15,13 +15,13 @@ from team_code.pid_controller import PIDController
 
 
 WEATHERS = {
-        'ClearNoon': carla.WeatherParameters.ClearNoon,
+    "ClearNoon": carla.WeatherParameters.ClearNoon,
 }
 WEATHERS_IDS = list(WEATHERS)
 
 
 def get_entry_point():
-    return 'AutoPilot'
+    return "AutoPilot"
 
 
 def _numpy(carla_vector, normalize=False):
@@ -49,7 +49,7 @@ def get_collision(p1, v1, p2, v2):
         return False, None
 
     x = np.linalg.solve(A, b)
-    collides = all(x >= 0) and all(x <= 1) # how many seconds until collision
+    collides = all(x >= 0) and all(x <= 1)  # how many seconds until collision
 
     return collides, p1 + x[0] * v1
 
@@ -75,7 +75,7 @@ class AutoPilot(MapAgent):
 
     def setup(self, path_to_conf_file):
         super().setup(path_to_conf_file)
-            
+
     def _init(self):
         super()._init()
 
@@ -83,26 +83,30 @@ class AutoPilot(MapAgent):
         self._speed_controller = PIDController(K_P=5.0, K_I=0.5, K_D=1.0, n=40)
 
         # for stop signs
-        self._target_stop_sign = None # the stop sign affecting the ego vehicle
-        self._stop_completed = False # if the ego vehicle has completed the stop sign
-        self._affected_by_stop = False # if the ego vehicle is influenced by a stop sign
+        self._target_stop_sign = None  # the stop sign affecting the ego vehicle
+        self._stop_completed = False  # if the ego vehicle has completed the stop sign
+        self._affected_by_stop = (
+            False  # if the ego vehicle is influenced by a stop sign
+        )
 
     def _get_angle_to(self, pos, theta, target):
-        R = np.array([
-            [np.cos(theta), -np.sin(theta)],
-            [np.sin(theta),  np.cos(theta)],
-            ])
+        R = np.array(
+            [
+                [np.cos(theta), -np.sin(theta)],
+                [np.sin(theta), np.cos(theta)],
+            ]
+        )
 
         aim = R.T.dot(target - pos)
         angle = -np.degrees(np.arctan2(-aim[1], aim[0]))
-        angle = 0.0 if np.isnan(angle) else angle 
+        angle = 0.0 if np.isnan(angle) else angle
 
         return angle
 
     def _get_control(self, target, far_target, tick_data):
         pos = self._get_position(tick_data)
-        theta = tick_data['compass']
-        speed = tick_data['speed']
+        theta = tick_data["compass"]
+        speed = tick_data["speed"]
 
         # Steering.
         angle_unnorm = self._get_angle_to(pos, theta, target)
@@ -118,13 +122,13 @@ class AutoPilot(MapAgent):
         target_speed = 4.0 if should_slow else 7.0
         brake = self._should_brake()
         target_speed = target_speed if not brake else 0.0
-        
+
         self.should_slow = int(should_slow)
         self.should_brake = int(brake)
         self.angle = angle
         self.angle_unnorm = angle_unnorm
         self.angle_far_unnorm = angle_far_unnorm
-        
+
         delta = np.clip(target_speed - speed, 0.0, 0.25)
         throttle = self._speed_controller.step(delta)
         throttle = np.clip(throttle, 0.0, 0.75)
@@ -144,7 +148,7 @@ class AutoPilot(MapAgent):
             index = random.choice(range(len(WEATHERS)))
             self.weather_id = WEATHERS_IDS[index]
             weather = WEATHERS[WEATHERS_IDS[index]]
-            print (self.weather_id, weather)
+            # print (self.weather_id, weather)
             self._world.set_weather(weather)
 
         data = self.tick(input_data)
@@ -153,7 +157,9 @@ class AutoPilot(MapAgent):
         near_node, near_command = self._waypoint_planner.run_step(gps)
         far_node, far_command = self._command_planner.run_step(gps)
 
-        steer, throttle, brake, target_speed = self._get_control(near_node, far_node, data)
+        steer, throttle, brake, target_speed = self._get_control(
+            near_node, far_node, data
+        )
 
         control = carla.VehicleControl()
         control.steer = steer + 1e-2 * np.random.randn()
@@ -161,17 +167,26 @@ class AutoPilot(MapAgent):
         control.brake = float(brake)
 
         if self.step % 10 == 0 and self.save_path is not None:
-            self.save(near_node, far_node, near_command, steer, throttle, brake, target_speed, data)
+            self.save(
+                near_node,
+                far_node,
+                near_command,
+                steer,
+                throttle,
+                brake,
+                target_speed,
+                data,
+            )
 
         return control
 
     def _should_brake(self):
         actors = self._world.get_actors()
 
-        vehicle = self._is_vehicle_hazard(actors.filter('*vehicle*'))
-        light = self._is_light_red(actors.filter('*traffic_light*'))
-        walker = self._is_walker_hazard(actors.filter('*walker*'))
-        stop_sign = self._is_stop_sign_hazard(actors.filter('*stop*'))
+        vehicle = self._is_vehicle_hazard(actors.filter("*vehicle*"))
+        light = self._is_light_red(actors.filter("*traffic_light*"))
+        walker = self._is_walker_hazard(actors.filter("*walker*"))
+        stop_sign = self._is_stop_sign_hazard(actors.filter("*stop*"))
 
         self.is_vehicle_present = 1 if vehicle is not None else 0
         self.is_red_light_present = 1 if light is not None else 0
@@ -197,7 +212,7 @@ class AutoPilot(MapAgent):
         return am_ab > 0 and am_ab < ab_ab and am_ad > 0 and am_ad < ad_ad
 
     def _get_forward_speed(self, transform=None, velocity=None):
-        """ Convert the vehicle transform directly to forward speed """
+        """Convert the vehicle transform directly to forward speed"""
         if not velocity:
             velocity = self._vehicle.get_velocity()
         if not transform:
@@ -206,7 +221,9 @@ class AutoPilot(MapAgent):
         vel_np = np.array([velocity.x, velocity.y, velocity.z])
         pitch = np.deg2rad(transform.rotation.pitch)
         yaw = np.deg2rad(transform.rotation.yaw)
-        orientation = np.array([np.cos(pitch) * np.cos(yaw), np.cos(pitch) * np.sin(yaw), np.sin(pitch)])
+        orientation = np.array(
+            [np.cos(pitch) * np.cos(yaw), np.cos(pitch) * np.sin(yaw), np.sin(pitch)]
+        )
         speed = np.dot(vel_np, orientation)
         return speed
 
@@ -235,7 +252,9 @@ class AutoPilot(MapAgent):
                 list_locations.append(waypoint.transform.location)
 
         for actor_location in list_locations:
-            if self._point_inside_boundingbox(actor_location, transformed_tv, stop.trigger_volume.extent):
+            if self._point_inside_boundingbox(
+                actor_location, transformed_tv, stop.trigger_volume.extent
+            ):
                 affected = True
 
         return affected
@@ -251,7 +270,9 @@ class AutoPilot(MapAgent):
                     return self._target_stop_sign
             else:
                 # reset if the ego vehicle is outside the influence of the current stop sign
-                if not self._is_actor_affected_by_stop(self._vehicle, self._target_stop_sign):
+                if not self._is_actor_affected_by_stop(
+                    self._vehicle, self._target_stop_sign
+                ):
                     self._affected_by_stop = False
                     self._stop_completed = False
                     self._target_stop_sign = None
@@ -276,7 +297,10 @@ class AutoPilot(MapAgent):
         return None
 
     def _is_light_red(self, lights_list):
-        if self._vehicle.get_traffic_light_state() != carla.libcarla.TrafficLightState.Green:
+        if (
+            self._vehicle.get_traffic_light_state()
+            != carla.libcarla.TrafficLightState.Green
+        ):
             affecting = self._vehicle.get_traffic_light()
 
             for light in self._traffic_lights:
@@ -312,7 +336,9 @@ class AutoPilot(MapAgent):
 
         o1 = _orientation(self._vehicle.get_transform().rotation.yaw)
         p1 = _numpy(self._vehicle.get_location())
-        s1 = max(10, 3.0 * np.linalg.norm(_numpy(self._vehicle.get_velocity()))) # increases the threshold distance
+        s1 = max(
+            10, 3.0 * np.linalg.norm(_numpy(self._vehicle.get_velocity()))
+        )  # increases the threshold distance
         v1_hat = o1
         v1 = s1 * v1_hat
 
@@ -335,9 +361,13 @@ class AutoPilot(MapAgent):
 
             # to consider -ve angles too
             angle_to_car = min(angle_to_car, 360.0 - angle_to_car)
-            angle_between_heading = min(angle_between_heading, 360.0 - angle_between_heading)
+            angle_between_heading = min(
+                angle_between_heading, 360.0 - angle_between_heading
+            )
 
-            if angle_between_heading > 60.0 and not (angle_to_car < 15 and distance < s1):
+            if angle_between_heading > 60.0 and not (
+                angle_to_car < 15 and distance < s1
+            ):
                 continue
             elif angle_to_car > 30.0:
                 continue
@@ -347,4 +377,3 @@ class AutoPilot(MapAgent):
             return target_vehicle
 
         return None
-        
