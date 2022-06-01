@@ -296,6 +296,11 @@ class Engine(object):
 
             self.cur_iter += 1
 
+            if self.cur_iter % args.val_every == 0:
+                logging.info("Running validation")
+                self.validate()
+                self.save()
+
         loss_epoch = loss_epoch / num_batches
         self.train_loss.append(loss_epoch)
         self.cur_epoch += 1
@@ -369,11 +374,6 @@ class Engine(object):
                 )
 
                 num_batches += 1
-
-                if self.cur_iter % args.val_every == 0:
-                    logging.info("Running validation")
-                    self.validate()
-                    self.save()
 
             wp_loss = wp_epoch / float(num_batches)
             tqdm.write(
