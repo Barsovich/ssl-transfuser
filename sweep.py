@@ -1,5 +1,3 @@
-from re import S
-from ssl_transfuser.train import setup_parser, run_training
 import time
 import datetime
 import logging
@@ -36,8 +34,8 @@ cd /home/gsimmons/ssl-transfuser/ && \\
 pwd && \\
 conda activate transfuser && \\
 python ssl_transfuser/train.py \\
-  --epochs 10 \\
-  --val_every 100 \\
+  --epochs 100 \\
+  --val_every 50 \\
   --next_frame_prediction_loss_coef {next_frame_coef} \\
   --cross_modal_prediction_loss_coef {cross_modal_coef} \\
   --sweep_id {sweep_id} \\
@@ -45,25 +43,41 @@ python ssl_transfuser/train.py \\
   --logdir /home/gsimmons/ssl-transfuser/logs/transfuser_next_frame_{next_frame_coef}_cross_modal_{cross_modal_coef} \\
 """
 
-MAX_STEPS = 600
+MAX_STEPS = 1800
+
 
 def get_dependency_jobid(max_concurrent_jobs):
     output = subprocess.run(["squeue"], capture_output=True)
 
-    with open("tmp.tsv", "w") as f:
+    with open("tmp.ssv", "w") as f:
         f.write(output.stdout.decode("utf-8"))
-    sq = pd.read_csv("tmp.tsv", sep="\t")
+    sq = pd.read_csv("tmp.ssv", sep="\t")
+    sq = sq.iloc[:, 0].str.split(r"\s+", expand=True)
+    sq.columns = [
+        "index",
+        "jobid",
+        "partition",
+        "jobname",
+        "user",
+        "state",
+        "time",
+        "command",
+        "reason",
+    ]
 
-    if len(sq[sq.USER=="gsimmons"]) >= max_concurrent_jobs:
-        jobid = sq[sq.USER=="gsimmons"]["JOBID"].max()
+    if len(sq[sq["user"] == "gsimmons"]) >= max_concurrent_jobs:
+        max_jobid = sq[sq["user"] == "gsimmons"]["jobid"].astype(int).max()
+        jobid = max_jobid - (max_concurrent_jobs - 1)
     else:
         jobid = None
-
     return jobid
 
+
 if __name__ == "__main__":
-    NEXT_FRAME_COEF_VALUES = [0.0, 0.1, 0.5, 1.0, 5.0, 10.0]
-    CROSS_MODAL_COEF_VALUES = [0.0, 0.1, 0.5, 1.0, 5.0, 10.0]
+    NEXT_FRAME_COEF_VALUES = [0.0, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]
+    CROSS_MODAL_COEF_VALUES = [0.0, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]
+    # NEXT_FRAME_COEF_VALUES = [0.0, 0.1, 0.5, 1.0, 5.0, 10.0]
+    # CROSS_MODAL_COEF_VALUES = [0.0, 0.1, 0.5, 1.0, 5.0, 10.0]
 
     sweep_id = "'" + str(datetime.datetime.now()) + "'"
 
@@ -86,7 +100,13 @@ if __name__ == "__main__":
                 time.sleep(1)
                 dependency_jobid = get_dependency_jobid(max_concurrent_jobs=3)
                 if dependency_jobid:
-                    cmd = ["sbatch", f"--dependency=afterany:{dependency_jobid}", str(script_path.absolute())]
+                    cmd = [
+                        "sbatch",
+                        f"--dependency=afterany:{dependency_jobid}",
+                        str(script_path.absolute()),
+                    ]
                 else:
                     cmd = ["sbatch", str(script_path.absolute())]
+
+                logging.info(f"Running {' '.join(cmd)}")
                 subprocess.run(cmd)
