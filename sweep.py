@@ -91,6 +91,7 @@ if __name__ == "__main__":
             )
             script_path = (
                 Path(SLURM_DIR)
+                / "model_training"
                 / f"transfuser_train_next_frame_{next_frame_coef}_cross_modal_{cross_modal_coef}.slurm"
             )
             with open(script_path, "w") as f:
